@@ -1,6 +1,9 @@
+using AspNetCoreIdentity.Areas.Identity.Data;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -19,10 +22,18 @@ namespace AspNetCoreIdentity
         }
 
         public IConfiguration Configuration { get; }
+        public object UIFramework { get; private set; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddDbContext<AspNetCoreIdentityContext>(options =>
+                    options.UseSqlServer(Configuration.GetConnectionString("AspNetCoreIdentityContextConnection")));
+
+            services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
+                .AddDefaultUI()
+                .AddEntityFrameworkStores<AspNetCoreIdentityContext>();
+
             services.AddControllersWithViews();
         }
 
@@ -45,6 +56,7 @@ namespace AspNetCoreIdentity
             app.UseRouting();
 
             app.UseAuthorization();
+            app.UseAuthentication();
 
             app.UseEndpoints(endpoints =>
             {
