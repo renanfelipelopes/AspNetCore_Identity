@@ -31,10 +31,22 @@ namespace AspNetCoreIdentity.Controllers
             return View();
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin, Gestor")]
         public IActionResult Secret()
         {
             return View();
+        }
+
+        [Authorize(Policy = "PodeExcluir")]
+        public IActionResult SecretClaim()
+        {
+            return View("Secret");
+        }
+
+        [Authorize(Policy = "PodeEscrever")]
+        public IActionResult SecretClaimEscrever()
+        {
+            return View("Secret");
         }
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
