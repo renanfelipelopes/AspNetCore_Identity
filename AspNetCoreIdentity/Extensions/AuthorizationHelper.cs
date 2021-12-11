@@ -1,11 +1,11 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 
 namespace AspNetCoreIdentity.Extensions
 {
     public class PermissaoNecessaria : IAuthorizationRequirement
     {
-        public string Permissao { get; set; }
+        public string Permissao { get; }
 
         public PermissaoNecessaria(string permissao)
         {

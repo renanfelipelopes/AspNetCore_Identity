@@ -1,56 +1,52 @@
-using AspNetCoreIdentity.Areas.Identity.Data;
+﻿using AspNetCoreIdentity.Config;
 using AspNetCoreIdentity.Extensions;
-using Microsoft.AspNetCore.Authorization;
+using KissLog;
+using KissLog.Apis.v1.Listeners;
+using KissLog.AspNetCore;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace AspNetCoreIdentity
 {
     public class Startup
     {
-        public Startup(IConfiguration configuration)
+        public IConfiguration Configuration { get; }
+
+
+        public Startup(IHostingEnvironment hostEnvironment)
         {
-            Configuration = configuration;
+            var builder = new ConfigurationBuilder()
+                .SetBasePath(hostEnvironment.ContentRootPath)
+                .AddJsonFile("appsettings.json", true, true)
+                .AddJsonFile($"appsettings.{hostEnvironment.EnvironmentName}.json", true, true)
+                .AddEnvironmentVariables();
+
+            if (hostEnvironment.IsProduction())
+            {
+                builder.AddUserSecrets<Startup>();
+            }
+
+            Configuration = builder.Build();
         }
 
-        public IConfiguration Configuration { get; }
-        public object UIFramework { get; private set; }
 
-        // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddDbContext<AspNetCoreIdentityContext>(options =>
-                    options.UseSqlServer(Configuration.GetConnectionString("AspNetCoreIdentityContextConnection")));
+            services.AddIdentityConfig(Configuration);
+            services.AddAuthorizationConfig();
+            services.ResolveDependencies();
 
-            services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
-                .AddDefaultUI()
-                .AddEntityFrameworkStores<AspNetCoreIdentityContext>();
-
-            services.AddAuthorization(options =>
+            services.AddMvc(options =>
             {
-                options.AddPolicy("PodeExcluir", policy => policy.RequireClaim("PodeExcluir"));
+                options.Filters.Add(typeof(AuditoriaFilter));
 
-                options.AddPolicy("PodeLer", policy => policy.Requirements.Add(new PermissaoNecessaria("PodeLer")));
-                options.AddPolicy("PodeEscrever", policy => policy.Requirements.Add(new PermissaoNecessaria("PodeEscrever")));
-            });
-
-            services.AddSingleton<IAuthorizationHandler, PermissaoNecessariaHandler>();
-
-            services.AddControllersWithViews();
+            }).SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
         }
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
             if (env.IsDevelopment())
             {
@@ -58,26 +54,25 @@ namespace AspNetCoreIdentity
             }
             else
             {
-                app.UseExceptionHandler("/Home/Error");
-                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+                app.UseExceptionHandler("/erro/500");
+                app.UseStatusCodePagesWithRedirects("/erro/{0}");
                 app.UseHsts();
             }
+
+            app.UseKissLogMiddleware();
+
             app.UseHttpsRedirection();
             app.UseStaticFiles();
+            app.UseCookiePolicy();
 
-            app.UseRouting();
-
-            app.UseAuthorization();
             app.UseAuthentication();
 
-            app.UseEndpoints(endpoints =>
+            app.UseMvc(routes =>
             {
-                endpoints.MapRazorPages();
-
-                endpoints.MapControllerRoute(
-                    name: "default",
-                    pattern: "{controller=Home}/{action=Index}/{id?}");
+                routes.MapRoute("default","{controller=Home}/{action=Index}/{id?}");
             });
+
+            LogConfig.RegisterKissLogListeners(Configuration);
         }
     }
 }
