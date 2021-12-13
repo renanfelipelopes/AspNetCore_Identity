@@ -33,6 +33,7 @@ namespace AspNetCoreIdentity.Controllers
         
         public IActionResult Privacy()
         {
+            throw new Exception("Erro");
             return View();
         }
 
